@@ -15,11 +15,14 @@ const uri = "mongodb+srv://flutter:flutter@clusterluiz.yzscwl0.mongodb.net/?retr
 // Nome do banco de dados
 const dbName = 'BrainFocusTrainner';
 
-// Nome da coleção
-const collectionName = 'usuario';
+// Nome da coleção de usuários
+const userCollectionName = 'usuario';
 
-// Função para buscar documentos
-async function getDocuments() {
+// Nome da coleção de psicólogos
+const psychologistCollectionName = 'psicologo';
+
+// Função para buscar documentos de usuários
+async function getUserDocuments() {
     const client = new MongoClient(uri);
 
     try {
@@ -27,7 +30,7 @@ async function getDocuments() {
         console.log("Conectado ao MongoDB");
 
         const db = client.db(dbName);
-        const collection = db.collection(collectionName);
+        const collection = db.collection(userCollectionName);
 
         const documents = await collection.find({}).toArray();
 
@@ -41,27 +44,59 @@ async function getDocuments() {
     }
 }
 
+// Função para buscar documentos de psicólogos
+async function getPsychologistDocuments() {
+    const client = new MongoClient(uri);
 
+    try {
+        await client.connect();
+        console.log("Conectado ao MongoDB");
 
-// Definir o endpoint GET
+        const db = client.db(dbName);
+        const collection = db.collection(psychologistCollectionName);
+
+        const documents = await collection.find({}).toArray();
+
+        return documents;
+
+    } catch (err) {
+        console.error(`Erro ao conectar ao MongoDB: ${err}`);
+        throw err;
+    } finally {
+        await client.close();
+    }
+}
+
+// Definir o endpoint GET para usuários
 app.get('/usuarios', async (req, res) => {
     try {
-        const documents = await getDocuments();
+        const documents = await getUserDocuments();
         res.status(200).json(documents);
     } catch (err) {
-        res.status(500).json({ error: 'Erro ao buscar documentos do MongoDB' });
+        res.status(500).json({ error: 'Erro ao buscar documentos de usuários do MongoDB' });
+    }
+});
+
+// Definir o endpoint GET para psicólogos
+app.get('/psicologo', async (req, res) => {
+    try {
+        const documents = await getPsychologistDocuments();
+        
+        res.status(200).json(documents);
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao buscar documentos de psicólogos do MongoDB' });
     }
 });
 
 // Definir o endpoint POST para registro de usuários
-app.post('/register', async (req, res) => {
+app.post('/register_user', async (req, res) => {
     const { email, password, psychologistEmail, userName } = req.body;
     const client = new MongoClient(uri);
 
     try {
         await client.connect();
         const db = client.db(dbName);
-        const collection = db.collection(collectionName);
+        const collection = db.collection(userCollectionName);
 
         // Inserir novo usuário
         const result = await collection.insertOne({ email, password, psychologistEmail, userName });
@@ -76,15 +111,38 @@ app.post('/register', async (req, res) => {
     }
 });
 
+// Definir o endpoint POST para registro de psicólogos
+app.post('/register_psychologist', async (req, res) => {
+    const { email, password, name, cip } = req.body;
+    const client = new MongoClient(uri);
+
+    try {
+        await client.connect();
+        const db = client.db(dbName);
+        const collection = db.collection(psychologistCollectionName);
+
+        // Inserir novo psicólogo
+        const result = await collection.insertOne({ email, password, name, cip });
+        console.log('Psicólogo inserido:', result); // Adicionando log para verificar a inserção
+        res.status(201).json({ message: 'Psicólogo registrado com sucesso' });
+
+    } catch (err) {
+        console.error(`Erro ao registrar psicólogo: ${err}`);
+        res.status(500).json({ error: 'Erro ao registrar psicólogo' });
+    } finally {
+        await client.close();
+    }
+});
+
 // Definir o endpoint POST para login de usuários
-app.post('/login', async (req, res) => {
+app.post('/login_user', async (req, res) => {
     const { email, password } = req.body;
     const client = new MongoClient(uri);
 
     try {
         await client.connect();
         const db = client.db(dbName);
-        const collection = db.collection(collectionName);
+        const collection = db.collection(userCollectionName);
 
         // Verificar as credenciais do usuário
         const user = await collection.findOne({ email, password });
@@ -96,8 +154,38 @@ app.post('/login', async (req, res) => {
         }
 
     } catch (err) {
-        console.error(`Erro ao verificar login: ${err}`);
-        res.status(500).json({ error: 'Erro ao verificar login' });
+        console.error(`Erro ao verificar login de usuário: ${err}`);
+        res.status(500).json({ error: 'Erro ao verificar login de usuário' });
+    } finally {
+        await client.close();
+    }
+});
+
+// Definir o endpoint POST para login de psicólogos
+app.post('/login_psychologist', async (req, res) => {
+    const { email, password } = req.body;
+    const client = new MongoClient(uri);
+
+    try {
+        await client.connect();
+        const db = client.db(dbName);
+        const collection = db.collection(psychologistCollectionName);
+
+        // Verificar as credenciais do psicólogo
+        const psychologist = await collection.findOne({ email, password });
+
+        console.log(`Tentativa de login: email=${email}, password=${password}`);
+        console.log(`Encontrado: ${psychologist ? JSON.stringify(psychologist) : 'nenhum usuário encontrado'}`);
+
+        if (psychologist) {
+            res.status(200).json({ message: 'Login bem-sucedido', token: 'dummy-token' });
+        } else {
+            res.status(401).json({ error: 'Credenciais inválidas' });
+        }
+
+    } catch (err) {
+        console.error(`Erro ao verificar login de psicólogo: ${err}`);
+        res.status(500).json({ error: 'Erro ao verificar login de psicólogo' });
     } finally {
         await client.close();
     }
