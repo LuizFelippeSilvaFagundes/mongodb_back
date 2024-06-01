@@ -8,6 +8,7 @@ const port = 3000;
 
 app.use(bodyParser.json());
 app.use(cors());
+app.use(express.json());
 
 // URI de conexão ao MongoDB
 const uri = "mongodb+srv://flutter:flutter@clusterluiz.yzscwl0.mongodb.net/?retryWrites=true&w=majority&appName=ClusterLuiz";
@@ -20,6 +21,9 @@ const userCollectionName = 'usuario';
 
 // Nome da coleção de psicólogos
 const psychologistCollectionName = 'psicologo';
+
+// Nome da coleção de recordes
+const recordsCollectionName = 'recordes';
 
 // Função para buscar documentos de usuários
 async function getUserDocuments() {
@@ -186,6 +190,48 @@ app.post('/login_psychologist', async (req, res) => {
     } catch (err) {
         console.error(`Erro ao verificar login de psicólogo: ${err}`);
         res.status(500).json({ error: 'Erro ao verificar login de psicólogo' });
+    } finally {
+        await client.close();
+    }
+});
+
+// Definir o endpoint POST para adicionar recordes
+app.post('/addrecord', async (req, res) => {
+    const { score, elapsedTime, nivel } = req.body;
+    const client = new MongoClient(uri);
+
+    try {
+        await client.connect();
+        const db = client.db(dbName);
+        const collection = db.collection(recordsCollectionName);
+
+        // Inserir novo recorde
+        const result = await collection.insertOne({ score, elapsedTime, nivel });
+        console.log('Recorde adicionado:', result); // Adicionando log para verificar a inserção
+        res.status(201).json({ message: 'Recorde adicionado com sucesso' });
+
+    } catch (err) {
+        console.error(`Erro ao adicionar recorde: ${err}`);
+        res.status(500).json({ error: 'Erro ao adicionar recorde' });
+    } finally {
+        await client.close();
+    }
+});
+
+// Definir o endpoint GET para obter todos os recordes
+app.get('/recordes', async (req, res) => {
+    try {
+        const client = new MongoClient(uri);
+        await client.connect();
+        const db = client.db(dbName);
+        const collection = db.collection(recordsCollectionName);
+
+        const records = await collection.find({}).toArray();
+
+        res.status(200).json(records);
+    } catch (err) {
+        console.error(`Erro ao buscar recordes: ${err}`);
+        res.status(500).json({ error: 'Erro ao buscar recordes' });
     } finally {
         await client.close();
     }
