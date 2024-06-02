@@ -69,7 +69,7 @@ app.get('/usuarios', async (req, res) => {
 });
 
 // Definir o endpoint GET para psicólogos
-app.get('/psicologo', async (req, res) => {
+app.get('/psicologos', async (req, res) => {
     try {
         const documents = await getPsychologistDocuments();
         
